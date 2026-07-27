@@ -1,47 +1,30 @@
-# IoMT BLE Sensor Simulator (Raspberry Pi 5)
+# IoT Biomedical Monitoring System - BLE Simulator (Backend)
 
-## Overview
-This repository contains the Node.js backend script designed to run on a Raspberry Pi 5. Its primary function is to act as a hardware emulator (Far Edge node) within an Internet of Medical Things (IoMT) architecture. The script configures the Raspberry Pi's integrated Bluetooth Low Energy (BLE) module to operate as a virtual GATT Server, simulating the real-time continuous transmission of multiparametric biomedical data (Heart Rate, Temperature, Movement, and Posture).
+## a) Project Overview
+The **IoT Biomedical Monitoring System** is a comprehensive solution designed to simulate and track health parameters, originally modeled after a heart-failure IoT monitoring project (IIT Partnership). The system monitors real-time patient vitals via Bluetooth Low Energy (BLE), detects potential anomalies (such as high heart rate coupled with low movement), and provides a platform for patients to record clinical annotations and symptoms securely.
 
-## Hardware
-* **Target Device:** Raspberry Pi 5
-* **Network Interface:** Integrated Bluetooth 5.0 / BLE radio
-* **Role:** BLE Peripheral Device / GATT Server
+## b) System Architecture
+The system is composed of two primary layers communicating over Bluetooth Low Energy (BLE):
 
-## Software and Dependencies
-The simulation environment relies on a JavaScript runtime executing directly on the Linux-based operating system (Raspberry Pi OS).
+1.  **The BLE Mock Server (Backend/Hardware):** A Node.js service running on a Raspberry Pi (or similar device) utilizing `@abandonware/bleno`. It advertises as a peripheral device (`IIT_Sensor_Mock`) and streams stochastic biometric data mimicking a wearable sensor. It uses the standard Bluetooth SIG Heart Rate Service (`180D`) and Characteristic (`2A37`).
+2.  **The Mobile Application (Frontend):** A React Native application acting as the Central device. It scans for the specific hardware, connects via BLE GATT, and continuously parses the incoming raw byte stream. It utilizes Zustand for global state management to handle vitals, connection status, and clinical logs.
 
-* **Runtime:** Node.js
-* **Package Manager:** npm
-* **Primary Library:** `@abandonware/bleno`
-  * *Description:* A Node.js module for implementing BLE peripherals. It provides the low-level bindings required to interface with the Linux Bluetooth stack (BlueZ), allowing the definition of custom GAP (Generic Access Profile) advertising and GATT (Generic Attribute Profile) Services and Characteristics.
+## c) Component Repositories
+*   **[Frontend Repository - Mobile App]** (https://github.com/UniSalento-IDALab-IoTCourse-2025-2026/wot-project-2025-2026-frontend-miranda)
+*   **[Backend Repository - Raspberry Pi BLE Server]** (https://github.com/UniSalento-IDALab-IoTCourse-2025-2026/wot-project-2025-2026-backend-miranda) *(Current Repository)*
 
-## Architecture and Structure
-The backend is structured around the BLE client-server taxonomy. The script dynamically constructs a medical service profile based on standard Bluetooth SIG UUIDs.
+---
 
-### System Flow
-1. **Radio State Management:** The script initializes the BLE radio. Once powered on, it begins advertising the device presence (e.g., `IIT_Sensor_Mock`).
-2. **GATT Server Instantiation:** Services are broadcasted. For instance, the Heart Rate Service (`0x180D`).
-3. **Characteristic Subscription:** When a Central Device (the React Native mobile application) connects and subscribes to the notification characteristic (e.g., `0x2A37`), the telemetry stream is initiated.
-4. **Data Transmission (Raw Bytes):** To ensure power efficiency and adhere to BLE standards, data is not transmitted as JSON or Strings. The Node.js script allocates binary buffers (e.g., `Buffer.alloc(2)`), writes the requisite 8-bit format flags to the first byte, writes the simulated integer to the subsequent bytes, and pushes the payload over the air.
+## d) Present Component: Backend BLE Simulator
 
-### Project Directory Structure
-```text
-simulator-iomt/
-│
-├── node_modules/             # Installed dependencies
-├── package.json              # Project metadata and dependency tree
-├── package-lock.json         # Exact dependency versions
-└── simulator.js              # Main execution script containing the Bleno GATT 
-```
+This repository contains the Node.js script used to mock a wearable medical sensor. It is intended to run on a Raspberry Pi or any Linux-based machine with a compatible Bluetooth radio.
 
+### Key Features:
+*   **Peripheral Advertising:** Uses `@abandonware/bleno` to broadcast the device presence under the local name `IIT_Sensor_Mock`.
+*   **GATT Server Setup:** Establishes a Primary Service using the official Bluetooth SIG Heart Rate Service UUID (`180D`).
+*   **Telemetry Streaming:** Creates a Characteristic (`2A37`) with `notify` properties to push continuous updates to subscribed clients.
+*   **Stochastic Data Generation:** Generates a randomized heartbeat value between 60 and 150 BPM every 1000ms (1Hz) to simulate a live patient.
+*   **Proper BLE Payload Formatting:** Writes data to a 2-byte buffer, adhering to the GATT specification (allocating byte 0 for formatting flags and byte 1 for the 8-bit BPM payload).
 
-### Execution
-Because the script requires direct access to the Bluetooth hardware interface (HCI) on Linux, it must be executed with elevated root privileges.
-
-To start the BLE GATT Server:
-```
-sudo node simulator.js
-```
-### Testing and Validation
-Prior to interfacing with the final mobile application, the data stream integrity can be validated using a secondary device running nRF Connect for Mobile. Scanning for the advertised local name and inspecting the characteristic notifications will confirm the correct raw byte formatting and transmission intervals.
+### Execution:
+The script requires root/sudo privileges to control the Bluetooth HCI (Host Controller Interface) states. Once executed, it waits for a central device (the mobile app) to subscribe to the characteristic before it begins generating and transmitting the mock telemetry stream.
